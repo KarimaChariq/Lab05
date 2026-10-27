@@ -36,7 +36,39 @@ def main(page: ft.Page):
     lista_strumenti = ft.ListView(expand=True, spacing=5, padding=10, auto_scroll=True)
 
     # Tutti i TextField per le info necessarie per aggiungere un nuovo strumento (tipo, marca, anno, contatore posti)
-    # TODO
+    input_tipo = ft.TextField(label="Tipo", hint_text="Es. Chitarra")
+    input_marca = ft.TextField(label="Marca", hint_text="Es. Fender")
+    input_anno = ft.TextField(label="Anno di acquisto", hint_text="Es. 2021")
+
+    # Contatore per il valore in euro dello strumento (usando TextField con bottoni o TextField numerico modificabile)
+    input_valore = ft.TextField(label="Valore (€)", value="100.0")
+
+    def decrementa_valore(e):
+        try:
+            val = float(input_valore.value)
+            valore_aggiornato = max(0.0, val - 10.0)
+            input_valore.value = str(round(valore_aggiornato, 2))
+            input_valore.update()
+        except ValueError:
+            pass
+
+    def incrementa_valore(e):
+        try:
+            val = float(input_valore.value)
+            valore_aggiornato = val + 10.0
+            input_valore.value = str(round(valore_aggiornato, 2))
+            input_valore.update()
+        except ValueError:
+            pass
+
+    btn_meno = ft.IconButton(icon=ft.icons.REMOVE, on_click=decrementa_valore)
+    btn_piu = ft.IconButton(icon=ft.icons.ADD, on_click=incrementa_valore)
+
+    row_valore = ft.Row(
+        controls=[input_valore, btn_meno, btn_piu],
+        alignment=ft.MainAxisAlignment.CENTER
+    )
+
 
     # --- FUNZIONI APP ---
     def aggiorna_lista_strumenti():
@@ -44,25 +76,62 @@ def main(page: ft.Page):
         for strumento in deposito.strumenti_ordinati_per_marca():
             stato = "✅" if strumento.disponibile else "⛔"
             lista_strumenti.controls.append(ft.Text(f"{stato} {strumento}"))
-
+            lista_strumenti.update()
     # --- HANDLERS APP ---
     def cambia_tema(e):
         page.theme_mode = ft.ThemeMode.DARK if toggle_cambia_tema.value else ft.ThemeMode.LIGHT
         toggle_cambia_tema.label = "Tema scuro" if toggle_cambia_tema.value else "Tema chiaro"
-
+        page.update()
     def conferma_responsabile(e):
         deposito.set_responsabile(input_responsabile.value)
         txt_responsabile.value = f"Responsabile: {deposito.get_responsabile()}"
-
+        txt_responsabile.update()
     # Handlers per la gestione dei pulsanti utili all'inserimento di un nuovo strumento
-    # TODO
+    file_aggiungi_strumento = ft.Ref[ft.TextField]()
+
+    def aggiungi_nuovo_strumento(e):
+        tipo = input_tipo.value.strip()
+        marca = input_marca.value.strip()
+        str_anno = input_anno.value.strip()
+        str_valore = input_valore.value.strip()
+
+        # Controlli di validazione
+        if not tipo or not marca or not str_anno or not str_valore:
+            alert.show_alert("Errore: Tutti i campi devono essere compilati.")
+            return
+
+        try:
+            anno_acquisto = int(str_anno)
+        except ValueError:
+            alert.show_alert("Errore: Il campo 'Anno di acquisto' deve essere un numero intero valido.")
+            return
+
+        try:
+            valore = float(str_valore)
+        except ValueError:
+            alert.show_alert("Errore: Il campo 'Valore' deve essere un numero valido.")
+            return
+
+        # Aggiunta tramite il metodo del deposito
+        deposito.aggiungi_strumento(tipo, marca, anno_acquisto, valore)
+
+        # Svuota i campi di input
+        input_tipo.value = ""
+        input_marca.value = ""
+        input_anno.value = ""
+        input_valore.value = "100.0"
+
+        # Aggiorna la schermata / lista
+        aggiorna_lista_strumenti()
+        page.update()
+
 
     # --- EVENTI ---
     toggle_cambia_tema = ft.Switch(label="Tema scuro", value=True, on_change=cambia_tema)
     pulsante_conferma_responsabile = ft.Button("Conferma", on_click=conferma_responsabile)
 
     # Pulsanti per la gestione dell'inserimento di un nuovo strumento
-    # TODO
+    pulsante_aggiungi = ft.ElevatedButton("Aggiungi strumento", on_click=aggiungi_nuovo_strumento)
 
     # --- LAYOUT ---
     page.add(
@@ -80,7 +149,15 @@ def main(page: ft.Page):
                alignment=ft.MainAxisAlignment.CENTER),
 
         # Sezione 3
-        # TODO
+        ft.Divider(),
+        ft.Text("Aggiungi Nuovo Strumento", size=20),
+        ft.Row(
+            controls=[input_tipo, input_marca, input_anno],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=10
+        ),
+        row_valore,
+        pulsante_aggiungi,
 
         # Sezione 4
         ft.Divider(),
